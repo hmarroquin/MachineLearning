@@ -1,0 +1,83 @@
+---
+title: "Machine Learning - Prediction Model"
+author: "Henry Marroquin"
+date: "Saturday, September 26, 2015"
+output: html_document
+---
+
+***
+
+###OVERVIEW
+Using exercise accelerometers data provided by [http://groupware.les.inf.puc-rio.br/har](http://groupware.les.inf.puc-rio.br/har), build a Machine Learning algorithm to predict if the subject perfomed the exercise in a correct or incorrect manner(Participants in the dataset were asked to perform barbell lifts in 5 different ways each.  ie Correctly or incorrectl).
+
+The Training data set used for this project can be found here:
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The Test data set used to test the model can be found here:
+[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv)
+
+
+###DATA PROCESSING
+Load required packaged and datasets for training a model and do subsequent out of sample testing :
+```{r, cache=TRUE}
+# packages:
+library(caret)
+library(randomForest)
+library(ggplot2)
+
+
+# Load training data:
+rawtrain = read.csv("pml-training.csv")
+# create a sub partition to do mock testing and derive an out of sample error of the model.   
+intrain <- createDataPartition(y=rawtrain$classe, p=0.75, list = FALSE)
+training <- rawtrain[intrain,]
+# OutofSample Test:
+testing <- rawtrain[-intrain,] 
+
+```
+
+##DATA PREPROCESSING
+clean up data and remove irrelevant columns.
+
+```{r, cache=TRUE}
+#identify amount of column with NA
+na_columns = sapply(training, function(x) {sum(is.na(x))})
+table(na_columns)
+# flag which columns to remove
+remove_columns = names(na_columns[na_columns==14396])
+#remove columsn
+training = training[, !names(training) %in% remove_columns]
+#str(training)   #used to observe new results
+
+
+```
+
+###FIT TRAINING MODEL
+```{r,cache=TRUE}
+modelfit <- train(classe ~.,data=training, method = "rf",prox=TRUE)
+
+```
+
+Look at our Model stats.  It was bootstrapped a total of 25 times, opting for a model with the highest accuracy of roughly 98%.
+```{r}
+modelfit
+```
+### TEST PREDICT MODEL WITH OUT OF SAMPLE DATA.
+
+```{r, cache=TRUE}
+#clean up testing dataset as well.
+testing <- testing[, !names(testing) %in% remove_columns]
+# run Prediction on out of sample dataset
+predictions <- predict(modelfit,newdata=testing)
+# analyse results
+summary(predictions)
+```
+
+### PERFORM FULL TEST
+run model on test values provided:
+```{r, cache=TRUE}
+rawtest = read.csv("pml-testing.csv")
+#fulltest <- rawtest[, !names(rawtest) %in% remove_columns]
+#Fullpredictions <- predict(modelfit,newdata=fulltest)
+#summary(Fullpredictions)
+```
